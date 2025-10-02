@@ -6,7 +6,7 @@
   networking.interfaces.ens18.useDHCP = true;     # explicite sur l'interface VirtIO par défaut
 
   #### Cloud-init : désactivé (évite qu'il touche au DNS/réseau)
-  services.cloud-init.enable = false;
+  services.cloud-init.enable = lib.mkForce false;
 
   #### Tailscale
   services.tailscale.enable = true;
