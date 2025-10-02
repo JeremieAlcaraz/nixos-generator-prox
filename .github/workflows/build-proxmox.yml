@@ -23,7 +23,7 @@ jobs:
 
       - name: Build
         run: |
-          nix build .#default --show-trace
+          nix build .#proxmox-vm --show-trace
           mkdir -p out
           find result -name "*.vma.zst" -exec cp {} out/nixos.vma.zst \;
           ls -lh out/
