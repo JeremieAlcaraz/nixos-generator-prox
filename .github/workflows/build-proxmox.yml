@@ -25,22 +25,55 @@ jobs:
         run: |
           nix build .#proxmox-vm --show-trace
           mkdir -p out
-          echo "Contenu du répertoire result:"
-          ls -la result/ || echo "Répertoire result non trouvé"
-          echo "Recherche de fichiers .vma ou similaires:"
-          find result -type f \( -name "*.vma*" -o -name "*.qcow2" -o -name "*.img" \) 2>/dev/null || echo "Aucun fichier image trouvé"
-          echo "Copie du fichier trouvé (s'il existe):"
-          # Essaie d'abord .vma.zst, puis les autres formats
-          if find result -name "*.vma.zst" -exec cp {} out/nixos.vma.zst \; 2>/dev/null; then
-            echo "Fichier .vma.zst copié avec succès"
-          elif find result -name "*.vma" -exec cp {} out/nixos.vma.zst \; 2>/dev/null; then
-            echo "Fichier .vma copié et renommé en .vma.zst"
-          else
-            echo "Aucun fichier .vma trouvé à copier"
+          
+          echo "=== Type de result ==="
+          file result || echo "result n'existe pas"
+          
+          echo "=== Contenu de result (si c'est un répertoire) ==="
+          if [ -d result ]; then
+            ls -la result/
           fi
-          ls -lh out/ || echo "Répertoire out vide"
+          
+          echo "=== Si result est un lien symbolique, voir la cible ==="
+          if [ -L result ]; then
+            readlink result
+            TARGET=$(readlink result)
+            ls -lh "$TARGET"
+          fi
+          
+          echo "=== Recherche de tous les fichiers .vma* ==="
+          find -L result -type f \( -name "*.vma*" -o -name "*.qcow2" \) 2>/dev/null || echo "Aucun fichier trouvé"
+          
+          echo "=== Copie du fichier ==="
+          # nixos-generators avec format proxmox génère un fichier .vma.zst
+          # Le fichier est soit directement result, soit dans le store nix
+          if [ -f result ]; then
+            # result est directement le fichier
+            cp result out/nixos.vma.zst
+            echo "✓ Fichier result copié directement"
+          elif [ -L result ] && [ -f "$(readlink result)" ]; then
+            # result est un lien vers le fichier
+            cp "$(readlink result)" out/nixos.vma.zst
+            echo "✓ Fichier lié copié"
+          else
+            # Cherche dans result/ si c'est un répertoire
+            FOUND_FILE=$(find -L result -type f -name "*.vma.zst" 2>/dev/null | head -n 1)
+            if [ -n "$FOUND_FILE" ]; then
+              cp "$FOUND_FILE" out/nixos.vma.zst
+              echo "✓ Fichier trouvé: $FOUND_FILE"
+            else
+              echo "✗ Aucun fichier trouvé!"
+              ls -laR result/ 2>/dev/null || echo "Impossible de lister result"
+              exit 1
+            fi
+          fi
+          
+          echo "=== Vérification finale ==="
+          ls -lh out/
+          file out/nixos.vma.zst
 
       - uses: actions/upload-artifact@v4
         with:
           name: nixos-proxmox
           path: out/nixos.vma.zst
+        if: success()
