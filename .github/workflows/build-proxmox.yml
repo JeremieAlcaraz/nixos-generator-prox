@@ -25,8 +25,20 @@ jobs:
         run: |
           nix build .#proxmox-vm --show-trace
           mkdir -p out
-          find result -name "*.vma.zst" -exec cp {} out/nixos.vma.zst \;
-          ls -lh out/
+          echo "Contenu du répertoire result:"
+          ls -la result/ || echo "Répertoire result non trouvé"
+          echo "Recherche de fichiers .vma ou similaires:"
+          find result -type f \( -name "*.vma*" -o -name "*.qcow2" -o -name "*.img" \) 2>/dev/null || echo "Aucun fichier image trouvé"
+          echo "Copie du fichier trouvé (s'il existe):"
+          # Essaie d'abord .vma.zst, puis les autres formats
+          if find result -name "*.vma.zst" -exec cp {} out/nixos.vma.zst \; 2>/dev/null; then
+            echo "Fichier .vma.zst copié avec succès"
+          elif find result -name "*.vma" -exec cp {} out/nixos.vma.zst \; 2>/dev/null; then
+            echo "Fichier .vma copié et renommé en .vma.zst"
+          else
+            echo "Aucun fichier .vma trouvé à copier"
+          fi
+          ls -lh out/ || echo "Répertoire out vide"
 
       - uses: actions/upload-artifact@v4
         with:
