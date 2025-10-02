@@ -21,7 +21,7 @@ jobs:
           name: jeremiealcaraz
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
-      - name: Build image
+      - name: Build
         run: |
           nix build .#default --show-trace
           mkdir -p out
