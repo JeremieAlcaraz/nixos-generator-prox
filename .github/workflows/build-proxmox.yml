@@ -1,47 +1,34 @@
-name: Build Proxmox VM image
+name: Build Proxmox VM
 
 on:
   workflow_dispatch:
   push:
-    branches: [main, dev]
+    branches: [main]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          submodules: false
+      - uses: actions/checkout@v4
 
-      - name: Install Nix
-        uses: cachix/install-nix-action@v27
+      - uses: cachix/install-nix-action@v27
         with:
-          nix_path: nixpkgs=channel:nixos-unstable
           extra_nix_config: |
             experimental-features = nix-command flakes
 
-      - name: Use Cachix (pull & push)
-        uses: cachix/cachix-action@v14
+      - uses: cachix/cachix-action@v14
         with:
           name: jeremiealcaraz
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
-      - name: Build Proxmox VMA image
+      - name: Build image
         run: |
+          nix build .#default --show-trace
           mkdir -p out
-          nix build .#proxmox-vm --show-trace
-          
-          # Trouve le fichier .vma.zst généré et le copie dans out/
-          find result -name "*.vma.zst" -type f -exec cp {} out/nixos-proxmox.vma.zst \;
-          
-          # Affiche des infos sur le fichier généré
+          find result -name "*.vma.zst" -exec cp {} out/nixos.vma.zst \;
           ls -lh out/
 
-      - name: Upload Proxmox artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: nixos-proxmox-vma
-          path: out/nixos-proxmox.vma.zst
-          retention-days: 90
-          compression-level: 0
+          name: nixos-proxmox
+          path: out/nixos.vma.zst
