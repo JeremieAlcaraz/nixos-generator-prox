@@ -1,0 +1,1 @@
+# nixos-generator-prox
